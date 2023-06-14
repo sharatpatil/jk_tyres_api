@@ -169,8 +169,8 @@ function insertEventData(eventData) {
 
         if (recordCount === 0) {
           const insertQuery = `
-            INSERT INTO things_data (timestamp, created_at, width_set, recipe_at_main_controller, width_actual_right, width_actual_left)
-            VALUES (@timestamp, @created_at, @width_set, @recipe_at_main_controller, @width_actual_right, @width_actual_left)
+            INSERT INTO things_data (timestamp, created_at, width_set, recipe_at_main_controller, width_actual_right, width_actual_left, cut_Width_actual_at_repair_conveyor, width_actual)
+            VALUES (@timestamp, @created_at, @width_set, @recipe_at_main_controller, @width_actual_right, @width_actual_left, @cut_Width_actual_at_repair_conveyor, @width_actual)
           `;
           const insertRequest = pool.request()
             .input('timestamp', sql.DateTime, event.timestamp)
@@ -178,7 +178,9 @@ function insertEventData(eventData) {
             .input('width_set', sql.Float, event.data.Width_set)
             .input('recipe_at_main_controller', sql.VarChar(255), event.data.Recipe_at_main_controller)
             .input('width_actual_right', sql.Float, event.data.Width_actual_right)
-            .input('width_actual_left', sql.Float, event.data.Width_actual_left);
+            .input('width_actual_left', sql.Float, event.data.Width_actual_left)
+            .input('cut_Width_actual_at_repair_conveyor', sql.Float, event.data.Cut_Width_actual_at_repair_conveyor)
+            .input('width_actual', sql.Float, event.data.Width_actual);
 
           insertRequest.query(insertQuery)
             .then(() => {
