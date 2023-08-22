@@ -163,6 +163,34 @@ const config = {
 let pool; // Define the pool variable
 
 
+function mapThingKeyToEquipment(thingKey) {
+  const mappings = {
+    '2cdc143f43': 'banbury6',
+    '8a921t3t2d': 'banbury7',
+    '52ac146b26': 'banbury8', // Added mapping
+    '47799b3af4': 'banbury9', // Added mapping
+    'bffcdd11ef': 'banbury10', // Added mapping
+    '4tfa3b765b': 'Bartel Bead Winding',
+    '5c58d23t67': 'Body ply cutter 1',
+    'ee9e4a62ea': 'Body ply cutter 2',
+    '18ac35cfde': 'Component Extruder',
+    'c25beddt44': 'EBR',
+    'efeded6tbb': 'Fischer Belt Cutter 1',
+    '9ed1e149a1': 'Gum Calender',
+    'c3a54419fc': 'Hot Calender',
+    '86f8ada652': 'Inner Liner',
+    'f1d597831d': 'Konstructa Belt Cutter 2',
+    '193193d481': 'Super Assembly',
+    '794ecat31d': 'TDA-1',
+    'a9t2bb36f7': 'TDA-2',
+    '527443tbe1': 'Tread Extruder',
+    'f5a9551d7a': 'Vipo Bead Winding',
+    // Add more mappings here
+  };
+
+  return mappings[thingKey] || '';
+}
+
 
 function insertEventData(eventData, thingKey) {
   let count = 0; // Counter for the number of records inserted
@@ -185,7 +213,7 @@ function insertEventData(eventData, thingKey) {
               OIL_2_SET_WEIGHT, OIL_3_CODE, OIL_3_ACTUAL_WEIGHT, OIL_3_SET_WEIGHT, POLYMER_1_CODE, POLYMER_1_ACTUAL_WEIGHT, POLYMER_1_SET_WEIGHT,
               POLYMER_2_CODE, POLYMER_2_ACTUAL_WEIGHT, POLYMER_2_SET_WEIGHT, POLYMER_3_CODE, POLYMER_3_ACTUAL_WEIGHT, POLYMER_3_SET_WEIGHT, POLYMER_4_CODE,
               POLYMER_4_ACTUAL_WEIGHT, POLYMER_4_SET_WEIGHT, POLYMER_5_CODE, POLYMER_5_ACTUAL_WEIGHT, POLYMER_5_SET_WEIGHT, TCU_1_SET, TCU_1_ACTUAL,
-              TCU_2_SET, TCU_2_ACTUAL, TCU_3_SET, TCU_3_ACTUAL, Recipe_at_main_controller,Extruder_pressure_set, Extruder_pressure_actual, MATERIAL_WIDTH,INSPECTION_CHECK_WEIGHT_SET,INSPECTION_CHECK_WEIGHT_ACTUAL,WIDTH_1_DS_DRIVE_SIDE,WIDTH_1_OS_OPERATOR_SIDE,WIDTH_2_DS_DRIVE_SIDE,WIDTH_2_OS_OPERATOR_SIDE,MAIN_RECIPE,WINDUP_RECIPE,Irradiation_width_set_point,Material_width_set_point,Actual_dose,Cut_Width_actual_at_repair_conveyor,Cut_Width_setpoint_at_repair_conveyor,ROOM_TEMPERATURE,Width_set,Width_actual,Width_set_left,Width_actual_left,Width_set_right,Width_actual_right,Gauge_Drive_Side_Set,Gauge_Drive_Side_Actual,Gauge_Operator_Side_Set,Gauge_Operator_Side_Actual,Windup_Booking_Temperature,CREEL_ROOM_TEMPERATURE,CREEL_ROOM_HUMIDITY,Set_width,Actual_width,MATERIAL_OVERLAP_SET,INNERLINER_WIDTH_SET,INNERLINER_WIDTH_ACTUAL,SIDE_WALL_WIDTH_SET,RIGHT_SIDE_WALL_WIDTH_ACTUAL,LEFT_SIDE_WALL_WIDTH_ACTUAL,CONTINUOUS_SCALE_WEIGHT_SETPOINT,CONTINUOUS_SCALE_WEIGHT_ACTUAL,FINAL_WIDTH_SETPOINT,FINAL_WIDTH_ACTUAL,COOL_GUM_TEMPERATURE,CUSHION_WIDTH_ACTUAL,CUTTINGLENGTH_SET,SIMPLEX_WEIGHT_SET,SIMPLEX_WEIGHT_ACTUAL,SKIVER_recipe_set_cut_length,PRODUCT_WIDTH_SET,PRODUCT_WIDTH_ACTUAL,PRODUCT_CODE,CUTTING_WIDTH_SET)
+              TCU_2_SET, TCU_2_ACTUAL, TCU_3_SET, TCU_3_ACTUAL, Recipe_at_main_controller,Extruder_pressure_set, Extruder_pressure_actual, MATERIAL_WIDTH,INSPECTION_CHECK_WEIGHT_SET,INSPECTION_CHECK_WEIGHT_ACTUAL,WIDTH_1_DS_DRIVE_SIDE,WIDTH_1_OS_OPERATOR_SIDE,WIDTH_2_DS_DRIVE_SIDE,WIDTH_2_OS_OPERATOR_SIDE,MAIN_RECIPE,WINDUP_RECIPE,Irradiation_width_set_point,Material_width_set_point,Actual_dose,Cut_Width_actual_at_repair_conveyor,Cut_Width_setpoint_at_repair_conveyor,ROOM_TEMPERATURE,Width_set,Width_actual,Width_set_left,Width_actual_left,Width_set_right,Width_actual_right,Gauge_Drive_Side_Set,Gauge_Drive_Side_Actual,Gauge_Operator_Side_Set,Gauge_Operator_Side_Actual,Windup_Booking_Temperature,CREEL_ROOM_TEMPERATURE,CREEL_ROOM_HUMIDITY,Set_width,Actual_width,MATERIAL_OVERLAP_SET,INNERLINER_WIDTH_SET,INNERLINER_WIDTH_ACTUAL,SIDE_WALL_WIDTH_SET,RIGHT_SIDE_WALL_WIDTH_ACTUAL,LEFT_SIDE_WALL_WIDTH_ACTUAL,CONTINUOUS_SCALE_WEIGHT_SETPOINT,CONTINUOUS_SCALE_WEIGHT_ACTUAL,FINAL_WIDTH_SETPOINT,FINAL_WIDTH_ACTUAL,COOL_GUM_TEMPERATURE,CUSHION_WIDTH_ACTUAL,CUTTINGLENGTH_SET,SIMPLEX_WEIGHT_SET,SIMPLEX_WEIGHT_ACTUAL,SKIVER_recipe_set_cut_length,PRODUCT_WIDTH_SET,PRODUCT_WIDTH_ACTUAL,PRODUCT_CODE,CUTTING_WIDTH_SET,Equipment_Name)
             VALUES (@timestamp, @created_at, @things_key,
               @Actual_Mixing_Energy, @CARBON_1_CODE, @CARBON_1_SET_WEIGHT, @CARBON_1_ACTUAL_WEIGHT, @CARBON_2_CODE, @CARBON_2_SET_WEIGHT, @CARBON_2_ACTUAL_WEIGHT,
               @CARBON_3_CODE, @CARBON_3_SET_WEIGHT, @CARBON_3_ACTUAL_WEIGHT, @carbonactualweight, @CURRENT_CARBON_WEIGHT, @dump_temperature, @energykw_set,
@@ -193,7 +221,7 @@ function insertEventData(eventData, thingKey) {
               @OIL_2_SET_WEIGHT, @OIL_3_CODE, @OIL_3_ACTUAL_WEIGHT, @OIL_3_SET_WEIGHT, @POLYMER_1_CODE, @POLYMER_1_ACTUAL_WEIGHT, @POLYMER_1_SET_WEIGHT,
               @POLYMER_2_CODE, @POLYMER_2_ACTUAL_WEIGHT, @POLYMER_2_SET_WEIGHT, @POLYMER_3_CODE, @POLYMER_3_ACTUAL_WEIGHT, @POLYMER_3_SET_WEIGHT, @POLYMER_4_CODE,
               @POLYMER_4_ACTUAL_WEIGHT, @POLYMER_4_SET_WEIGHT, @POLYMER_5_CODE, @POLYMER_5_ACTUAL_WEIGHT, @POLYMER_5_SET_WEIGHT, @TCU_1_SET, @TCU_1_ACTUAL,
-              @TCU_2_SET, @TCU_2_ACTUAL, @TCU_3_SET, @TCU_3_ACTUAL, @Recipe_at_main_controller, @Extruder_pressure_set, @Extruder_pressure_actual,@MATERIAL_WIDTH,@INSPECTION_CHECK_WEIGHT_SET,@INSPECTION_CHECK_WEIGHT_ACTUAL,@WIDTH_1_DS_DRIVE_SIDE,@WIDTH_1_OS_OPERATOR_SIDE,@WIDTH_2_DS_DRIVE_SIDE,@WIDTH_2_OS_OPERATOR_SIDE,@MAIN_RECIPE,@WINDUP_RECIPE,@Irradiation_width_set_point,@Material_width_set_point,@Actual_dose,@Cut_Width_actual_at_repair_conveyor,@Cut_Width_setpoint_at_repair_conveyor,@ROOM_TEMPERATURE,@Width_set,@Width_actual,@Width_set_left,@Width_actual_left,@Width_set_right,@Width_actual_right,@Gauge_Drive_Side_Set,@Gauge_Drive_Side_Actual,@Gauge_Operator_Side_Set,@Gauge_Operator_Side_Actual,@Windup_Booking_Temperature,@CREEL_ROOM_TEMPERATURE,@CREEL_ROOM_HUMIDITY,@Set_width,@Actual_width,@MATERIAL_OVERLAP_SET,@INNERLINER_WIDTH_SET,@INNERLINER_WIDTH_ACTUAL,@SIDE_WALL_WIDTH_SET,@RIGHT_SIDE_WALL_WIDTH_ACTUAL,@LEFT_SIDE_WALL_WIDTH_ACTUAL,@CONTINUOUS_SCALE_WEIGHT_SETPOINT,@CONTINUOUS_SCALE_WEIGHT_ACTUAL,@FINAL_WIDTH_SETPOINT,@FINAL_WIDTH_ACTUAL,@COOL_GUM_TEMPERATURE,@CUSHION_WIDTH_ACTUAL,@CUTTINGLENGTH_SET,@SIMPLEX_WEIGHT_SET,@SIMPLEX_WEIGHT_ACTUAL,@SKIVER_recipe_set_cut_length,@PRODUCT_WIDTH_SET,@PRODUCT_WIDTH_ACTUAL,@PRODUCT_CODE,@CUTTING_WIDTH_SET)
+              @TCU_2_SET, @TCU_2_ACTUAL, @TCU_3_SET, @TCU_3_ACTUAL, @Recipe_at_main_controller, @Extruder_pressure_set, @Extruder_pressure_actual,@MATERIAL_WIDTH,@INSPECTION_CHECK_WEIGHT_SET,@INSPECTION_CHECK_WEIGHT_ACTUAL,@WIDTH_1_DS_DRIVE_SIDE,@WIDTH_1_OS_OPERATOR_SIDE,@WIDTH_2_DS_DRIVE_SIDE,@WIDTH_2_OS_OPERATOR_SIDE,@MAIN_RECIPE,@WINDUP_RECIPE,@Irradiation_width_set_point,@Material_width_set_point,@Actual_dose,@Cut_Width_actual_at_repair_conveyor,@Cut_Width_setpoint_at_repair_conveyor,@ROOM_TEMPERATURE,@Width_set,@Width_actual,@Width_set_left,@Width_actual_left,@Width_set_right,@Width_actual_right,@Gauge_Drive_Side_Set,@Gauge_Drive_Side_Actual,@Gauge_Operator_Side_Set,@Gauge_Operator_Side_Actual,@Windup_Booking_Temperature,@CREEL_ROOM_TEMPERATURE,@CREEL_ROOM_HUMIDITY,@Set_width,@Actual_width,@MATERIAL_OVERLAP_SET,@INNERLINER_WIDTH_SET,@INNERLINER_WIDTH_ACTUAL,@SIDE_WALL_WIDTH_SET,@RIGHT_SIDE_WALL_WIDTH_ACTUAL,@LEFT_SIDE_WALL_WIDTH_ACTUAL,@CONTINUOUS_SCALE_WEIGHT_SETPOINT,@CONTINUOUS_SCALE_WEIGHT_ACTUAL,@FINAL_WIDTH_SETPOINT,@FINAL_WIDTH_ACTUAL,@COOL_GUM_TEMPERATURE,@CUSHION_WIDTH_ACTUAL,@CUTTINGLENGTH_SET,@SIMPLEX_WEIGHT_SET,@SIMPLEX_WEIGHT_ACTUAL,@SKIVER_recipe_set_cut_length,@PRODUCT_WIDTH_SET,@PRODUCT_WIDTH_ACTUAL,@PRODUCT_CODE,@CUTTING_WIDTH_SET,@Equipment_Name)
           `;
 
 
@@ -202,11 +230,26 @@ function insertEventData(eventData, thingKey) {
           //   VALUES (@timestamp, @created_at, @things_key, @width_set, @recipe_at_main_controller, @width_actual_right, @width_actual_left, @cut_Width_actual_at_repair_conveyor, @width_actual)
           // `;
 
+            // Usage example
+          const equipmentName = mapThingKeyToEquipment(thingKey);
+          
+          
+          // const apiTimestamp = new Date(event.timestamp).toISOString();
+          // const apiCreate = new Date(event.created_at).toISOString()
+
+          const receivedTimestampUTC = new Date(event.timestamp).toISOString();
+const createdAtUTC = new Date(event.created_at).toISOString();
+console.log("timestamp",receivedTimestampUTC)
+console.log("created_at",createdAtUTC)
 
           const insertRequest = pool.request()
-            .input('timestamp', sql.DateTime, event.timestamp)
-            .input('created_at', sql.DateTime, event.created_at)
+
+        
+
+            .input('timestamp', sql.DateTimeOffset, event.timestamp)
+            .input('created_at', sql.DateTimeOffset, event.created_at)
             .input('things_key', sql.VarChar, thingKey)
+            .input('Equipment_Name', sql.VarChar, equipmentName)
             // .input('Actual_Mixing_Energy', sql.VarChar, event.data.Actual_Mixing_Energy || '0')
             .input('Actual_Mixing_Energy', sql.VarChar, String(event.data.Actual_Mixing_Energy) || 'NULL')
 
