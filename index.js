@@ -145,9 +145,9 @@ let totalPages = 0;
 
 // let thing_key ='efeded6tbb';
 
-// const thingKeys = ['f5a9551d7a'];
+const thingKeys = ['efeded6tbb'];
 
-const thingKeys = ['2cdc143f43','8a921t3t2d','52ac146b26','47799b3af4','bffcdd11ef','4tfa3b765b','5c58d23t67','ee9e4a62ea','18ac35cfde','c25beddt44','efeded6tbb','9ed1e149a1','c3a54419fc','86f8ada652','f1d597831d','193193d481','794ecat31d','a9t2bb36f7','527443tbe1','f5a9551d7a']
+// const thingKeys = ['2cdc143f43','8a921t3t2d','52ac146b26','47799b3af4','bffcdd11ef','4tfa3b765b','5c58d23t67','ee9e4a62ea','18ac35cfde','c25beddt44','efeded6tbb','9ed1e149a1','c3a54419fc','86f8ada652','f1d597831d','193193d481','794ecat31d','a9t2bb36f7','527443tbe1','f5a9551d7a']
 
 
 const config = {
@@ -191,20 +191,78 @@ function mapThingKeyToEquipment(thingKey) {
   return mappings[thingKey] || '';
 }
 
+async function checkIfRecordExists(timestamp, thingKey) {
+  const query = `
+    SELECT COUNT(*) AS count
+    FROM new_things_data
+    WHERE timestamp = '${timestamp}'
+    AND things_key = '${thingKey}'
+  `;
 
-function insertEventData(eventData, thingKey) {
+  try {
+    const result = await pool.request().query(query);
+    const recordCount = result.recordset[0].count;
+    console.log('Record count:', recordCount); // For debugging purposes
+    return recordCount > 0;
+  } catch (error) {
+    console.error('Error checking record existence:', error);
+    return true; // Return true to avoid insertion in case of error
+  }
+}
+
+async function checkAndDeleteOneDuplicate(timestamp, thingKey) {
+  const query = `
+    SELECT id
+    FROM new_things_data
+    WHERE timestamp = '${timestamp}'
+    AND things_key = '${thingKey}'
+    ORDER BY id DESC
+  `;
+
+  try {
+    const result = await pool.request().query(query);
+    if (result.recordset.length != 0) {
+      if(result.recordset.length > 1){
+      const recordToDelete = result.recordset[0].id; // Get the latest duplicate
+      console.log('Deleting duplicate record with id:', recordToDelete);
+      
+      const deleteQuery = `
+        DELETE FROM new_things_data
+        WHERE id = ${recordToDelete}
+      `;
+      
+      await pool.request().query(deleteQuery);
+      console.log('Duplicate record deleted.');
+      return true; // Indicate that a duplicate was deleted}
+      }
+      else{
+        return true;
+      }
+    }
+
+    return false; // No duplicates found
+  } catch (error) {
+    console.error('Error checking and deleting duplicate:', error);
+    return true; // Return true to avoid insertion in case of error
+  }
+}
+
+
+
+
+
+async function insertEventData(eventData, thingKey) {
   let count = 0; // Counter for the number of records inserted
 
-  for (const event of eventData) {
-    const query = 'SELECT COUNT(*) AS count FROM new_things_data WHERE timestamp = @timestamp and things_key = @things_key';
-    const request = pool.request().input('timestamp', sql.DateTimeOffset, event.timestamp)
-      .input('things_key', thingKey);
-      try {
-    request.query(query)
-      .then((result) => {
-        const recordCount = result.recordset[0].count;
+  
 
-        if (recordCount === 0) {
+  for (const event of eventData) {
+    const recordExists = await checkAndDeleteOneDuplicate(event.timestamp, thingKey);
+
+      try {
+    
+        console.log("records",recordExists)
+        if (!recordExists) {
           const insertQuery = `
             INSERT INTO new_things_data (timestamp, created_at, things_key,
               Actual_Mixing_Energy, CARBON_1_CODE, CARBON_1_SET_WEIGHT, CARBON_1_ACTUAL_WEIGHT, CARBON_2_CODE, CARBON_2_SET_WEIGHT, CARBON_2_ACTUAL_WEIGHT,
@@ -238,16 +296,15 @@ function insertEventData(eventData, thingKey) {
           // const apiCreate = new Date(event.created_at).toISOString()
 
           const receivedTimestampUTC = new Date(event.timestamp).toISOString();
-const createdAtUTC = new Date(event.created_at).toISOString();
-console.log("timestamp",receivedTimestampUTC)
-console.log("created_at",createdAtUTC)
+          const createdAtUTC = new Date(event.created_at).toISOString();
+
 
           const insertRequest = pool.request()
 
         
 
-            .input('timestamp', sql.DateTimeOffset, event.timestamp)
-            .input('created_at', sql.DateTimeOffset, event.created_at)
+            .input('timestamp', sql.DateTimeOffset, receivedTimestampUTC)
+            .input('created_at', sql.DateTimeOffset, createdAtUTC)
             .input('things_key', sql.VarChar, thingKey)
             .input('Equipment_Name', sql.VarChar, equipmentName)
             // .input('Actual_Mixing_Energy', sql.VarChar, event.data.Actual_Mixing_Energy || '0')
@@ -388,7 +445,7 @@ console.log("created_at",createdAtUTC)
           insertRequest.query(insertQuery)
             .then(() => {
               count++;
-              console.log(`Record ${count}/${eventData.length} inserted successfully for page ${currentPage}`);
+              console.log(`Record ${count}/${eventData.length} inserted successfully for page ${currentPage} of thing key ${thingKey}`);
             })
             .catch((error) => {
               console.error('Error inserting data:', error);
@@ -396,10 +453,7 @@ console.log("created_at",createdAtUTC)
         } else {
           console.log('Record already exists:', event.timestamp, "On", new Date().toLocaleString('en-US', { timeZone: 'Asia/Calcutta' }));
         }
-      })
-      .catch((error) => {
-        console.error('Error checking for duplicate records:', error);
-      });
+    
     }
     catch (error) {
       console.error('An error occurred during the database query:', error);
