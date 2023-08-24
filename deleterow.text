@@ -1,0 +1,24 @@
+CREATE TRIGGER DeleteDuplicateRecords
+ON new_things_data
+AFTER INSERT
+AS
+BEGIN
+    DELETE FROM new_things_data
+    WHERE EXISTS (
+        SELECT 1
+        FROM new_things_data AS t
+        INNER JOIN inserted AS i ON t.timestamp = i.timestamp AND t.things_key = i.things_key
+        WHERE t.ID <> i.ID
+    );
+END;
+
+
+npm uninstall -g node-windows
+
+npm install -g npm
+
+npm install -g node-windows
+
+npm list -g node-windows
+
+node services.js

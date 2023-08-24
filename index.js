@@ -122,7 +122,7 @@
 
 
 
-const PORT = 4000;
+const PORT = 8080;
 const os = require('os');
 
 const express = require('express');
@@ -197,9 +197,9 @@ function insertEventData(eventData, thingKey) {
 
   for (const event of eventData) {
     const query = 'SELECT COUNT(*) AS count FROM new_things_data WHERE timestamp = @timestamp and things_key = @things_key';
-    const request = pool.request().input('timestamp', sql.DateTime, event.timestamp)
+    const request = pool.request().input('timestamp', sql.DateTimeOffset, event.timestamp)
       .input('things_key', thingKey);
-
+      try {
     request.query(query)
       .then((result) => {
         const recordCount = result.recordset[0].count;
@@ -400,6 +400,10 @@ console.log("created_at",createdAtUTC)
       .catch((error) => {
         console.error('Error checking for duplicate records:', error);
       });
+    }
+    catch (error) {
+      console.error('An error occurred during the database query:', error);
+    }
   }
 }
 
@@ -470,6 +474,13 @@ sql
   .catch((err) => {
     console.error('Error:', err);
   });
+
+
+  // Define a GET endpoint
+app.get('/', (req, res) => {
+  res.json({ message: `This is a simple API response. at port ${PORT}` });
+});
+
 
 
 // Start the server
