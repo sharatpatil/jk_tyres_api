@@ -478,7 +478,7 @@ sql
 
   // Define a GET endpoint
 app.get('/', (req, res) => {
-  res.json({ message: `This is a simple API response. at port ${PORT}` });
+  res.json({ message: `JK Tyres  API response. at port ${PORT}` });
 });
 
 
