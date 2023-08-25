@@ -462,7 +462,110 @@ async function insertEventData(eventData, thingKey) {
 }
 
 
-function fetchEventData(pageNumber, thingKey) {
+// function fetchEventData(pageNumber, thingKey) {
+//   const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
+
+//   const data = {
+//     idle_time_required: true,
+//     time_zone: 'Asia/Calcutta',
+//     thing_key: thingKey,
+//     from: `${currentDate} 00:00:00`,
+//     to: `${currentDate} 23:59:59`,
+//     page: pageNumber,
+//     page_size: pageSize
+//   };
+
+
+
+//   axios
+//     .post(apiUrl, data, { headers })
+//     .then((response) => {
+//       const apiResponse = response.data;
+//       if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
+//         console.error('Data not available or incorrect:', apiResponse);
+//         return; // Exit the function if data is not available or incorrect
+//       }
+
+//       // const eventData = apiResponse.efeded6tbb.event_data;
+//       // totalRecords = apiResponse.efeded6tbb.total_event_count;
+//       // totalPages = Math.ceil(totalRecords / pageSize);
+
+//       const eventData = apiResponse[thingKey].event_data;
+//       totalRecords = apiResponse[thingKey].total_event_count;
+//       totalPages = Math.ceil(totalRecords / pageSize);
+
+
+//       insertEventData(eventData, thingKey);
+
+//       if (currentPage < totalPages) {
+//         currentPage++;
+//         fetchEventData(currentPage, thingKey); // Fetch the next page of data
+//       }
+//     })
+//     .catch((error) => {
+//       console.error(error);
+//     });
+// }
+
+
+// Define a GET endpoint
+app.get('/retry-count', (req, res) => {
+  res.json({ retryCounts });
+});
+
+// async function fetchEventDataWithRetry(pageNumber, thingKey, retryCount = 3) {
+//   const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
+
+//   const data = {
+//     idle_time_required: true,
+//     time_zone: 'Asia/Calcutta',
+//     thing_key: thingKey,
+//     from: `${currentDate} 00:00:00`,
+//     to: `${currentDate} 23:59:59`,
+//     page: pageNumber,
+//     page_size: pageSize
+//   };
+
+//   try {
+//     const response = await axios.post(apiUrl, data, { headers });
+//     const apiResponse = response.data;
+
+//     if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
+//       console.error('Data not available or incorrect:', apiResponse);
+//       return;
+//     }
+
+//     const eventData = apiResponse[thingKey].event_data;
+//     totalRecords = apiResponse[thingKey].total_event_count;
+//     totalPages = Math.ceil(totalRecords / pageSize);
+
+//     insertEventData(eventData, thingKey);
+
+//     if (currentPage < totalPages) {
+//       currentPage++;
+//       fetchEventDataWithRetry(currentPage, thingKey);
+//     }
+//   } catch (error) {
+//     if (retryCount > 0 && error.code === 'ECONNRESET') {
+//       console.error('ECONNRESET error occurred. Retrying...', retryCount, 'at', new Date().toLocaleString('en-US', { timeZone: 'Asia/Calcutta' }));
+//       // Retry the request after a short delay
+//       setTimeout(() => {
+//         fetchEventDataWithRetry(pageNumber, thingKey, retryCount - 1);
+//       }, 1000); // Adjust the delay as needed
+//     } else {
+//       console.error('An error occurred:', error);
+//     }
+//   }
+// }
+
+
+const retryDelay = 5000; // Retry after 5 seconds
+
+// Define a map to store the error count for each thingKey
+const errorCountMap = new Map();
+
+// Function to fetch event data with retry mechanism
+async function fetchEventDataWithRetry(pageNumber, thingKey) {
   const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
 
   const data = {
@@ -475,36 +578,51 @@ function fetchEventData(pageNumber, thingKey) {
     page_size: pageSize
   };
 
+  try {
+    const response = await axios.post(apiUrl, data, { headers });
+    const apiResponse = response.data;
 
+    if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
+      console.error('Data not available or incorrect:', apiResponse);
+      return;
+    }
 
-  axios
-    .post(apiUrl, data, { headers })
-    .then((response) => {
-      const apiResponse = response.data;
-      if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
-        console.error('Data not available or incorrect:', apiResponse);
-        return; // Exit the function if data is not available or incorrect
-      }
+    // Reset error count when successful response is received
+    errorCountMap.set(thingKey, 0);
 
-      // const eventData = apiResponse.efeded6tbb.event_data;
-      // totalRecords = apiResponse.efeded6tbb.total_event_count;
-      // totalPages = Math.ceil(totalRecords / pageSize);
+    const eventData = apiResponse[thingKey].event_data;
+    totalRecords = apiResponse[thingKey].total_event_count;
+    totalPages = Math.ceil(totalRecords / pageSize);
 
-      const eventData = apiResponse[thingKey].event_data;
-      totalRecords = apiResponse[thingKey].total_event_count;
-      totalPages = Math.ceil(totalRecords / pageSize);
+    insertEventData(eventData, thingKey);
 
+    if (currentPage < totalPages) {
+      currentPage++;
+      fetchEventDataWithRetry(currentPage, thingKey);
+    }
+  } catch (error) {
+    console.error('An error occurred:', error);
 
-      insertEventData(eventData, thingKey);
+    if (error.code === 'ECONNRESET') {
+      // Increment error count for this thingKey
+      const currentErrorCount = errorCountMap.get(thingKey) || 0;
+      errorCountMap.set(thingKey, currentErrorCount + 1);
 
-      if (currentPage < totalPages) {
-        currentPage++;
-        fetchEventData(currentPage, thingKey); // Fetch the next page of data
-      }
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+      console.error('ECONNRESET error occurred. Retrying after delay...');
+      setTimeout(() => {
+        fetchEventDataWithRetry(pageNumber, thingKey);
+      }, retryDelay);
+    } else {
+      console.error('Other error occurred. Retrying after delay...');
+      setTimeout(() => {
+        fetchEventDataWithRetry(pageNumber, thingKey);
+      }, retryDelay);
+    }
+    
+    // Increment the error count for this thingKey
+    const currentErrorCount = errorCountMap.get(thingKey) || 0;
+    errorCountMap.set(thingKey, currentErrorCount + 1);
+  }
 }
 
 
@@ -518,10 +636,11 @@ sql
 
     // Call the fetchEventData function for each thingKey to start fetching and inserting the data
     thingKeys.forEach((thingKey) => {
-      fetchEventData(currentPage, thingKey);
+      errorCountMap.set(thingKey, 0);
+      fetchEventDataWithRetry(currentPage, thingKey);
       // Schedule fetchEventData to run every hour for each thingKey using cron job syntax
       cron.schedule('*/5 * * * *', () => {
-        fetchEventData(currentPage, thingKey);
+        fetchEventDataWithRetry(currentPage, thingKey);
       });
     });
   })
@@ -531,9 +650,17 @@ sql
 
 
   // Define a GET endpoint
-app.get('/', (req, res) => {
-  res.json({ message: `JK Tyres  API response. at port ${PORT}` });
-});
+  app.get('/', (req, res) => {
+    const errorCounts = {};
+    for (const thingKey of thingKeys) {
+      errorCounts[thingKey] = errorCountMap.get(thingKey) || 0;
+    }
+    
+    res.json({
+      message: `JK Tyres  API response at port ${PORT}`,
+      errorCounts: errorCounts
+    });
+  });
 
 
 
