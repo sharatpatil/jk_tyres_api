@@ -129,6 +129,7 @@ const express = require('express');
 const sql = require('mssql');
 const axios = require('axios');
 const cron = require('node-cron');
+const https = require('https');
 
 const app = express();
 
@@ -578,8 +579,17 @@ async function fetchEventDataWithRetry(pageNumber, thingKey) {
     page_size: pageSize
   };
 
+  const axiosInstance = axios.create({
+    baseURL: apiUrl,
+    headers,
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false, // Disable SSL certificate validation
+    }),
+  });
+
   try {
-    const response = await axios.post(apiUrl, data, { headers });
+    // const response = await axios.post(apiUrl, data, { headers });
+    const response = await axiosInstance.post(apiUrl, data);
     const apiResponse = response.data;
 
     if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
