@@ -122,7 +122,7 @@
 
 
 
-const PORT = 8080;
+const PORT = 3001;
 const os = require('os');
 
 const express = require('express');
@@ -130,6 +130,8 @@ const sql = require('mssql');
 const axios = require('axios');
 const cron = require('node-cron');
 const https = require('https');
+const cluster = require('cluster');
+const http = require('http');
 
 const app = express();
 
@@ -190,6 +192,20 @@ function mapThingKeyToEquipment(thingKey) {
   };
 
   return mappings[thingKey] || '';
+}
+
+function handleServerError(error) {
+  console.error('An error occurred:', error);
+
+  if (error.code === 'ECONNRESET') {
+    console.error('ECONNRESET error occurred. Restarting the server...');
+    // Gracefully exit the current process, which will trigger an automatic restart if using a process manager
+    // process.exit(1);
+  } else {
+    console.error('Other error occurred. Restarting the server...');
+    // Gracefully exit the current process
+    // process.exit(1);
+  }
 }
 
 async function checkIfRecordExists(timestamp, thingKey) {
@@ -449,6 +465,7 @@ async function insertEventData(eventData, thingKey) {
               console.log(`Record ${count}/${eventData.length} inserted successfully for page ${currentPage} of thing key ${thingKey}`);
             })
             .catch((error) => {
+              handleServerError(error);
               console.error('Error inserting data:', error);
             });
         } else {
@@ -457,56 +474,14 @@ async function insertEventData(eventData, thingKey) {
     
     }
     catch (error) {
+      handleServerError(error);
       console.error('An error occurred during the database query:', error);
     }
   }
 }
 
 
-// function fetchEventData(pageNumber, thingKey) {
-//   const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
 
-//   const data = {
-//     idle_time_required: true,
-//     time_zone: 'Asia/Calcutta',
-//     thing_key: thingKey,
-//     from: `${currentDate} 00:00:00`,
-//     to: `${currentDate} 23:59:59`,
-//     page: pageNumber,
-//     page_size: pageSize
-//   };
-
-
-
-//   axios
-//     .post(apiUrl, data, { headers })
-//     .then((response) => {
-//       const apiResponse = response.data;
-//       if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
-//         console.error('Data not available or incorrect:', apiResponse);
-//         return; // Exit the function if data is not available or incorrect
-//       }
-
-//       // const eventData = apiResponse.efeded6tbb.event_data;
-//       // totalRecords = apiResponse.efeded6tbb.total_event_count;
-//       // totalPages = Math.ceil(totalRecords / pageSize);
-
-//       const eventData = apiResponse[thingKey].event_data;
-//       totalRecords = apiResponse[thingKey].total_event_count;
-//       totalPages = Math.ceil(totalRecords / pageSize);
-
-
-//       insertEventData(eventData, thingKey);
-
-//       if (currentPage < totalPages) {
-//         currentPage++;
-//         fetchEventData(currentPage, thingKey); // Fetch the next page of data
-//       }
-//     })
-//     .catch((error) => {
-//       console.error(error);
-//     });
-// }
 
 
 // Define a GET endpoint
@@ -514,53 +489,10 @@ app.get('/retry-count', (req, res) => {
   res.json({ retryCounts });
 });
 
-// async function fetchEventDataWithRetry(pageNumber, thingKey, retryCount = 3) {
-//   const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
-
-//   const data = {
-//     idle_time_required: true,
-//     time_zone: 'Asia/Calcutta',
-//     thing_key: thingKey,
-//     from: `${currentDate} 00:00:00`,
-//     to: `${currentDate} 23:59:59`,
-//     page: pageNumber,
-//     page_size: pageSize
-//   };
-
-//   try {
-//     const response = await axios.post(apiUrl, data, { headers });
-//     const apiResponse = response.data;
-
-//     if (!apiResponse[thingKey] || !apiResponse[thingKey].event_data) {
-//       console.error('Data not available or incorrect:', apiResponse);
-//       return;
-//     }
-
-//     const eventData = apiResponse[thingKey].event_data;
-//     totalRecords = apiResponse[thingKey].total_event_count;
-//     totalPages = Math.ceil(totalRecords / pageSize);
-
-//     insertEventData(eventData, thingKey);
-
-//     if (currentPage < totalPages) {
-//       currentPage++;
-//       fetchEventDataWithRetry(currentPage, thingKey);
-//     }
-//   } catch (error) {
-//     if (retryCount > 0 && error.code === 'ECONNRESET') {
-//       console.error('ECONNRESET error occurred. Retrying...', retryCount, 'at', new Date().toLocaleString('en-US', { timeZone: 'Asia/Calcutta' }));
-//       // Retry the request after a short delay
-//       setTimeout(() => {
-//         fetchEventDataWithRetry(pageNumber, thingKey, retryCount - 1);
-//       }, 1000); // Adjust the delay as needed
-//     } else {
-//       console.error('An error occurred:', error);
-//     }
-//   }
-// }
 
 
-const retryDelay = 5000; // Retry after 5 seconds
+
+const retryDelay = 2000; // Retry after 5 seconds
 
 // Define a map to store the error count for each thingKey
 const errorCountMap = new Map();
@@ -611,6 +543,8 @@ async function fetchEventDataWithRetry(pageNumber, thingKey) {
       fetchEventDataWithRetry(currentPage, thingKey);
     }
   } catch (error) {
+
+    handleServerError(error);
     console.error('An error occurred:', error);
 
     if (error.code === 'ECONNRESET') {
@@ -673,9 +607,83 @@ sql
   });
 
 
+// Middleware to handle errors
+  app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).send('Something broke!');
+  });
+
+  
 
 // Start the server
-app.listen(PORT, () => {
+
+const server = http.createServer(app);
+
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
+
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+
+// // Graceful server restart logic
+// if (cluster.isMaster) {
+//   // Fork a new worker when the application starts
+//   const worker = cluster.fork();
+
+//   // Handle worker exit event
+//   cluster.on('exit', (deadWorker, code, signal) => {
+//     console.log(`Worker ${deadWorker.process.pid} died`);
+//     // Fork a new worker to replace the dead one
+//     const newWorker = cluster.fork();
+//     console.log(`Worker ${newWorker.process.pid} started`);
+//   });
+//   // Handle restart request
+//   app.get('/restart', (req, res) => {
+//     console.log('Restarting the server gracefully...');
+//     // worker.disconnect(); // Disconnect the worker from the master
+//     res.send('Restarting the server gracefully...');
+//   });
+// } else {
+//   // Worker process code
+//   console.log(`Worker ${process.pid} started`);
+// }
+
+
+// Handle unhandled exceptions
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  restartServer();
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+  restartServer();
+});
+
+function restartServer() {
+  console.log('Restarting the server...');
+  
+  // Close the server gracefully
+  server.close((err) => {
+    if (err) {
+      console.error('Error closing server:', err);
+    } else {
+      console.log('Server closed gracefully.');
+      
+      // Start the server again
+      server.listen(PORT, () => {
+        console.log(`Server is running on port ${PORT} again.`);
+      });
+    }
+  });
+}
+
+
+// app.listen(PORT, () => {
+//   console.log(`Server is running on port ${PORT}`);
+// });
 
