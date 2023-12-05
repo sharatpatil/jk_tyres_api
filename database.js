@@ -1,7 +1,6 @@
 const sql = require('mssql');
 const os = require('os');
 
-
 let pool; // Declare the pool as a global variable for reuse
 
 function connectToDatabase() {
@@ -15,9 +14,20 @@ function connectToDatabase() {
     },
   };
 
-  return sql.connect(config);
-}
+  const connection = new sql.ConnectionPool(config);
 
+  // Set the isolation level here
+  connection.on('connect', () => {
+    const request = connection.request();
+    request.query("SET TRANSACTION ISOLATION LEVEL READ COMMITTED", (err) => {
+      if (err) {
+        console.error("Error setting isolation level:", err);
+      }
+    });
+  });
+
+  return connection.connect();
+}
 
 module.exports = {
   connectToDatabase,

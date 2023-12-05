@@ -1,127 +1,3 @@
-// const PORT = 4000;
-// const os = require('os');
-
-
-// const sql = require('mssql');
-// const axios = require('axios');
-
-// const headers = {
-//   'Content-Type': 'application/json',
-//   'X-Access-Key': '8a31ef8btf65c31tc15dt32e888c3ab731e919ac'
-// };
-
-// const apiUrl = 'https://api.datonis.io/api/v3/datonis_query/thing_data';
-// const pageSize = 100; // Number of records per page
-// let currentPage = 1;
-// let totalRecords = 0;
-// let totalPages = 0;
-
-// const config = {
-//   user: 'sa',
-//   password: 'sa123',
-//   server: `${os.hostname}\\SQLSERVER`,
-//   database: 'test',
-//   options: {
-//     encrypt: false,
-//   },
-// };
-// function insertEventData(eventData) {
-//   let count = 0; // Counter for the number of records inserted
-
-//   for (const event of eventData) {
-//     const query = 'SELECT COUNT(*) AS count FROM things_data WHERE timestamp = @timestamp';
-//     const request = pool.request()
-//       .input('timestamp', sql.DateTime, event.timestamp);
-
-//     request.query(query)
-//       .then((result) => {
-//         const recordCount = result.recordset[0].count;
-
-//         if (recordCount === 0) {
-//           const insertQuery = `
-//             INSERT INTO things_data (timestamp, created_at, width_set, recipe_at_main_controller, width_actual_right, width_actual_left)
-//             VALUES (@timestamp, @created_at, @width_set, @recipe_at_main_controller, @width_actual_right, @width_actual_left)
-//           `;
-//           const insertRequest = pool.request()
-//             .input('timestamp', sql.DateTime, event.timestamp)
-//             .input('created_at', sql.DateTime, event.created_at)
-//             .input('width_set', sql.Float, event.data.Width_set)
-//             .input('recipe_at_main_controller', sql.VarChar(255), event.data.Recipe_at_main_controller)
-//             .input('width_actual_right', sql.Float, event.data.Width_actual_right)
-//             .input('width_actual_left', sql.Float, event.data.Width_actual_left);
-
-//           insertRequest.query(insertQuery)
-//             .then(() => {
-//               count++;
-//               console.log(`Record ${count}/${eventData.length} inserted successfully for page ${currentPage}`);
-//             })
-//             .catch((error) => {
-//               console.error('Error inserting data:', error);
-//             });
-//         } else {
-//           console.log('Record already exists:', event.timestamp);
-//         }
-//       })
-//       .catch((error) => {
-//         console.error('Error checking for duplicate records:', error);
-//       });
-//   }
-// }
-
-
-// function fetchEventData(pageNumber, pool) {
-
-//   const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
-
-//   const data = {
-//     idle_time_required: true,
-//     time_zone: 'Asia/Calcutta',
-//     thing_key: 'efeded6tbb',
-//     from: `${currentDate} 00:00:00`,
-//     to: `${currentDate} 23:59:59`,
-//     page: pageNumber,
-//     page_size: pageSize
-//   };
-
-
-
-//   axios
-//     .post(apiUrl, data, { headers })
-//     .then((response) => {
-//       const apiResponse = response.data;
-//       const eventData = apiResponse.efeded6tbb.event_data;
-//       totalRecords = apiResponse.efeded6tbb.total_event_count;
-//       totalPages = Math.ceil(totalRecords / pageSize);
-
-//       insertEventData(eventData, pool);
-
-//       if (currentPage < totalPages) {
-//         currentPage++;
-//         fetchEventData(currentPage, pool); // Fetch the next page of data
-//       }
-//     })
-//     .catch((error) => {
-//       console.error(error);
-//     });
-// }
-
-// // Connect to the MSSQL database
-// sql
-//   .connect(config)
-//   .then((pool) => {
-//     console.log('Connected to the MSSQL database.');
-
-//     // Call the fetchEventData function to start fetching and inserting the data
-//     fetchEventData(currentPage, pool);
-//   })
-//   .catch((err) => {
-//     console.error('Error:', err);
-//   });
-
-
-
-
-
 const PORT = 3001;
 const os = require('os');
 
@@ -201,10 +77,18 @@ function handleServerError(error) {
     console.error('ECONNRESET error occurred. Restarting the server...');
     // Gracefully exit the current process, which will trigger an automatic restart if using a process manager
     // process.exit(1);
+    // fetchEventDataWithRetry(pageNumber, thingKey[0]);
+    // processThingKeys(0);
+    processAllThingKeys()
+    
+    
   } else {
     console.error('Other error occurred. Restarting the server...');
     // Gracefully exit the current process
     // process.exit(1);
+    // fetchEventDataWithRetry(pageNumber, thingKey)[0];
+    // processThingKeys(0);
+    processAllThingKeys()
   }
 }
 
@@ -249,7 +133,7 @@ async function checkAndDeleteOneDuplicate(timestamp, thingKey) {
       `;
       
       await pool.request().query(deleteQuery);
-      console.log('Duplicate record deleted.');
+      // console.log('Duplicate record deleted.');
       return true; // Indicate that a duplicate was deleted}
       }
       else{
@@ -265,6 +149,73 @@ async function checkAndDeleteOneDuplicate(timestamp, thingKey) {
 }
 
 
+// Function to get the count of records for a specific thingKey for today
+async function getDatabaseCountForThingKey(thingKey) {
+  const currentDate = new Date().toISOString().split('T')[0]; // Get the current date in "YYYY-MM-DD" format
+
+  // SQL query to count records for the specified thingKey for today
+  const sql = `
+    SELECT COUNT(*) AS count
+    FROM events
+    WHERE thing_key = ${thingKey} AND DATE(timestamp) = ${currentDate};
+  `;
+
+  // Execute the SQL query
+  const result = await pool.request().query(sql);
+  console.log('Record count:', results[0].count); // For debugging purposes
+    const count = results[0].count;
+   return count;
+ 
+}
+
+
+// Function to process thingKeys sequentially
+// async function processThingKeys() {
+//   // for (let i = 0; i < thingKeys.length; i++) {
+//   //   const thingKey = thingKeys[i];
+//   //   currentPage = 1; // Reset currentPage for each thingKey
+//   //   await fetchEventDataWithRetry(currentPage, thingKey);
+//   // }
+
+//     await thingKeys.forEach((thingKey) => {
+//       errorCountMap.set(thingKey, 0);
+//        fetchEventDataWithRetry(currentPage, thingKey);
+//     });
+
+//   // // All thingKeys are processed, you can choose to restart or exit here
+//   // console.log('All thingKeys processed. Restarting...');
+
+//   // // Restart by calling processThingKeys again
+//   // processThingKeys();
+// }
+
+
+// async function processThingKeys(index) {
+//   const thingKey = thingKeys[index];
+//   currentPage = 1; // Reset currentPage for each thingKey
+//   await fetchEventDataWithRetry(currentPage, thingKey);
+
+//   if (index === thingKeys.length - 1) {
+//     // All thingKeys are processed, restart the process
+//     console.log('All thingKeys processed. Restarting...');
+//     processThingKeys(0); // Start from the beginning
+//   } else {
+//     // Process the next thingKey
+//     processThingKeys(index + 1);
+//   }
+// }
+
+async function processAllThingKeys() {
+  const promises = thingKeys.map((thingKey) => {
+    currentPage = 1; // Reset currentPage for each thingKey
+    return fetchEventDataWithRetry(currentPage, thingKey);
+  });
+
+  await Promise.all(promises);
+
+  console.log('All thingKeys processed. Restarting...');
+  processAllThingKeys(); // Restart the process
+}
 
 
 
@@ -278,7 +229,7 @@ async function insertEventData(eventData, thingKey) {
 
       try {
     
-        console.log("records",recordExists)
+        // console.log("records",recordExists)
         if (!recordExists) {
           const insertQuery = `
             INSERT INTO new_things_data (timestamp, created_at, things_key,
@@ -469,7 +420,7 @@ async function insertEventData(eventData, thingKey) {
               console.error('Error inserting data:', error);
             });
         } else {
-          console.log('Record already exists:', event.timestamp, "On", new Date().toLocaleString('en-US', { timeZone: 'Asia/Calcutta' }));
+          console.log('Record already exists: for:',thingKey,  event.timestamp, "On", new Date().toLocaleString('en-US', { timeZone: 'Asia/Calcutta' }));
         }
     
     }
@@ -517,8 +468,9 @@ async function fetchEventDataWithRetry(pageNumber, thingKey) {
     httpsAgent: new https.Agent({
       rejectUnauthorized: false, // Disable SSL certificate validation
     }),
+    timeout: 50000,
   });
-
+  return new Promise(async (resolve) => {
   try {
     // const response = await axios.post(apiUrl, data, { headers });
     const response = await axiosInstance.post(apiUrl, data);
@@ -536,12 +488,40 @@ async function fetchEventDataWithRetry(pageNumber, thingKey) {
     totalRecords = apiResponse[thingKey].total_event_count;
     totalPages = Math.ceil(totalRecords / pageSize);
 
+    // const databaseCount = getDatabaseCountForThingKey(thingKey); // Implement this function
+    // if (totalRecords !== databaseCount) {
+    //   insertEventData(eventData, thingKey);
+    // }
+
     insertEventData(eventData, thingKey);
+    // Return a promise that resolves when the processing is complete
+ 
+  
 
     if (currentPage < totalPages) {
       currentPage++;
-      fetchEventDataWithRetry(currentPage, thingKey);
+      await fetchEventDataWithRetry(currentPage, thingKey);
+    } else {
+      // If all pages for this thingKey are fetched, move to the next thingKey
+      // const currentIndex = thingKeys.indexOf(thingKey);
+      // if (currentIndex < thingKeys.length - 1) {
+      //   const nextThingKey = thingKeys[currentIndex + 1];
+      //   console.log("nextThingsKey",nextThingKey)
+      //   currentPage = 1; // Reset currentPage for the next thingKey
+      //   fetchEventDataWithRetry(currentPage, nextThingKey);
+      // } else {
+      //   // All thingKeys are processed, you can choose to restart or exit here
+      //   console.log('All thingKeys processed. Restarting...');
+      //   // Restart by calling fetchEventDataWithRetry with the first thingKey again
+      //   currentPage = 1;
+      //   fetchEventDataWithRetry(currentPage, thingKeys[0]);
+      // }
+      resolve();
+      processAllThingKeys();
     }
+
+
+
   } catch (error) {
 
     handleServerError(error);
@@ -553,20 +533,18 @@ async function fetchEventDataWithRetry(pageNumber, thingKey) {
       errorCountMap.set(thingKey, currentErrorCount + 1);
 
       console.error('ECONNRESET error occurred. Retrying after delay...');
-      setTimeout(() => {
-        fetchEventDataWithRetry(pageNumber, thingKey);
-      }, retryDelay);
+      // fetchEventDataWithRetry(pageNumber, thingKey);
+      processAllThingKeys();
     } else {
-      console.error('Other error occurred. Retrying after delay...');
-      setTimeout(() => {
-        fetchEventDataWithRetry(pageNumber, thingKey);
-      }, retryDelay);
+      // fetchEventDataWithRetry(pageNumber, thingKey);
+      processAllThingKeys();
     }
     
-    // Increment the error count for this thingKey
-    const currentErrorCount = errorCountMap.get(thingKey) || 0;
-    errorCountMap.set(thingKey, currentErrorCount + 1);
+     // Increment the error count for this thingKey
+     const currentErrorCount = errorCountMap.get(thingKey) || 0;
+     errorCountMap.set(thingKey, currentErrorCount + 1);
   }
+});
 }
 
 
@@ -577,19 +555,29 @@ sql
   .then((poolInstance) => {
     console.log('Connected to the MSSQL database.');
     pool = poolInstance; // Assign the pool instance to the global variable
-
+  
     // Call the fetchEventData function for each thingKey to start fetching and inserting the data
-    thingKeys.forEach((thingKey) => {
-      errorCountMap.set(thingKey, 0);
-      fetchEventDataWithRetry(currentPage, thingKey);
-      // Schedule fetchEventData to run every hour for each thingKey using cron job syntax
-      cron.schedule('*/5 * * * *', () => {
-        fetchEventDataWithRetry(currentPage, thingKey);
-      });
-    });
+    // thingKeys.forEach((thingKey) => {
+    //   errorCountMap.set(thingKey, 0);
+    //   fetchEventDataWithRetry(currentPage, thingKey);
+    // });
+
+    // fetchEventDataWithRetry(currentPage, thingKeys[0]);
+    processAllThingKeys();
+
   })
   .catch((err) => {
     console.error('Error:', err);
+  });
+
+
+  app.get('/fetch_data', (req, res) => {
+    // thingKeys.forEach((thingKey) => {
+    //   errorCountMap.set(thingKey, 0);
+    //   fetchEventDataWithRetry(currentPage, thingKey);
+    // });
+    processAllThingKeys();
+    res.send('Fetching data...');
   });
 
 
@@ -628,28 +616,7 @@ server.listen(PORT, () => {
 });
 
 
-// // Graceful server restart logic
-// if (cluster.isMaster) {
-//   // Fork a new worker when the application starts
-//   const worker = cluster.fork();
 
-//   // Handle worker exit event
-//   cluster.on('exit', (deadWorker, code, signal) => {
-//     console.log(`Worker ${deadWorker.process.pid} died`);
-//     // Fork a new worker to replace the dead one
-//     const newWorker = cluster.fork();
-//     console.log(`Worker ${newWorker.process.pid} started`);
-//   });
-//   // Handle restart request
-//   app.get('/restart', (req, res) => {
-//     console.log('Restarting the server gracefully...');
-//     // worker.disconnect(); // Disconnect the worker from the master
-//     res.send('Restarting the server gracefully...');
-//   });
-// } else {
-//   // Worker process code
-//   console.log(`Worker ${process.pid} started`);
-// }
 
 
 // Handle unhandled exceptions
@@ -671,12 +638,15 @@ function restartServer() {
   server.close((err) => {
     if (err) {
       console.error('Error closing server:', err);
+      processAllThingKeys();
     } else {
       console.log('Server closed gracefully.');
       
       // Start the server again
       server.listen(PORT, () => {
         console.log(`Server is running on port ${PORT} again.`);
+        // fetchEventDataWithRetry(currentPage, thingKeys[0]);
+        processAllThingKeys();
       });
     }
   });

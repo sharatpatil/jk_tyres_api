@@ -20,15 +20,6 @@ let currentPage = 1;
 let totalRecords = 0;
 let totalPages = 0;
 
-// const config = {
-//   user: 'sa',
-//   password: 'sa123',
-//   server: `${os.hostname}\\SQLSERVER`,
-//   database: 'test',
-//   options: {
-//     encrypt: false,
-//   },
-// };
 
 
 let pool; // Define the pool variable

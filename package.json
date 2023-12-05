@@ -25,7 +25,7 @@
     "script-19": "node ee9e4a62ea.js",
     "script-20": "node f5a9551d7a.js",
     "start-all": "concurrently \"npm run script-1\" \"npm run script-2\" \"npm run script-3\" \"npm run script-4\" \"npm run script-5\" \"npm run script-6\" \"npm run script-7\" \"npm run script-8\" \"npm run script-9\" \"npm run script-10\" \"npm run script-11\" \"npm run script-12\" \"npm run script-13\" \"npm run script-14\" \"npm run script-15\" \"npm run script-16\" \"npm run script-17\" \"npm run script-18\" \"npm run script-19\" \"npm run script-20\" "
-  },  
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -39,6 +39,6 @@
     "node-windows": "^1.0.0-beta.8"
   },
   "devDependencies": {
-    "concurrently": "^8.2.1"
+    "concurrently": "^8.2.2"
   }
 }
